@@ -7,3 +7,6 @@ mlruns/
 mlflow.db
 .env
 *.ipynb_checkpoints
+data/processed/*.npy
+data/processed/*.csv
+data/processed/cleaned_flows.parquet
