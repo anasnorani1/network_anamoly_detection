@@ -1,3 +1,5 @@
+from prometheus_fastapi_instrumentator import Instrumentator
+from prometheus_client import Counter, Histogram
 from fastapi import FastAPI, HTTPException
 import numpy as np
 
@@ -5,7 +7,18 @@ from src.schemas import PredictionRequest, PredictionResponse, HealthResponse, M
 from src.model_loader import models
 
 app = FastAPI(title="Network Anomaly Detection API", version="1.0")
+Instrumentator().instrument(app).expose(app)
+prediction_counter = Counter(
+    "ml_predictions_total",
+    "Total predictions made, by outcome",
+    ["is_attack", "attack_type"]
+)
 
+attack_probability_histogram = Histogram(
+    "ml_attack_probability",
+    "Distribution of attack probability scores",
+    buckets=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
+)
 @app.get("/health", response_model=HealthResponse)
 def health():
     return HealthResponse(status="ok")
@@ -49,5 +62,11 @@ def predict(request: PredictionRequest):
 
         response.attack_type = models.label_encoder.inverse_transform([multi_pred])[0]
         response.attack_type_confidence = float(multi_proba[multi_pred])
+
+    prediction_counter.labels(
+        is_attack=str(is_attack),
+        attack_type=response.attack_type or "N/A"
+    ).inc()
+    attack_probability_histogram.observe(float(attack_prob))
 
     return response
