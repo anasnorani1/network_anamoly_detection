@@ -3,6 +3,8 @@ services:
     build: .
     ports:
       - "8000:8000"
+    volumes:
+      - ./data/processed:/app/data/processed
     container_name: anomaly-api
 
   prometheus:
